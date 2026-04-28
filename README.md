@@ -1,4 +1,7 @@
 # react-native-testsmith
+[![CI](https://github.com/fazzysyed/react-native-testsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/fazzysyed/react-native-testsmith/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/react-native-testsmith.svg)](https://www.npmjs.com/package/react-native-testsmith)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Production-ready, local-first CLI for React Native unit testing with Jest and React Native Testing Library.
 
