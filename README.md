@@ -159,6 +159,7 @@ Notes:
 - First-time model download may take several minutes. This is one-time per model.
 - Without `--apply`, the command runs in preview mode and prints output.
 - If `--run-jest` is set and Jest fails, AI auto-fix retries run (based on `ai.maxRetries`).
+- We are actively working on a cloud API mode for complete automatic testing across whole projects.
 
 ## CI
 
