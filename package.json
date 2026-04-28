@@ -1,0 +1,48 @@
+{
+  "name": "react-native-testsmith",
+  "version": "0.1.0",
+  "description": "Local-first React Native testing CLI for Jest and Testing Library",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "react-native-testsmith": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/bin.ts",
+    "lint": "eslint .",
+    "test": "npm run build && node --test tests/**/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "react-native",
+    "jest",
+    "testing-library",
+    "cli",
+    "test-generator",
+    "rn"
+  ],
+  "dependencies": {
+    "@babel/parser": "^7.28.0",
+    "@babel/traverse": "^7.28.0",
+    "commander": "^14.0.1",
+    "fast-glob": "^3.3.3",
+    "kleur": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.28.0",
+    "@types/node": "^24.8.1",
+    "eslint": "^9.38.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
