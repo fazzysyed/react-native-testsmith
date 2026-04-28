@@ -17,6 +17,11 @@ type AiSetupOptions = {
 
 export async function runAiSetup(projectRoot: string, options: AiSetupOptions): Promise<void> {
   const config = loadConfig(projectRoot);
+  if (config.ai.runtime === "api") {
+    logInfo("AI runtime is set to API mode.");
+    logInfo("Set RN_TESTSMITH_API_URL (required) and RN_TESTSMITH_API_KEY (optional).");
+    return;
+  }
   const model = options.model ?? config.ai.model;
 
   if (!isOllamaInstalled()) {

@@ -52,9 +52,10 @@ program
 
 program
   .command("ai-enhance")
-  .description("Generate or improve tests with local Ollama model")
+  .description("Generate or improve tests with AI runtime")
   .requiredOption("-t, --target <path>", "target component path")
   .option("-m, --model <name>", "Ollama model name override")
+  .option("--runtime <runtime>", "ai runtime: ollama | api")
   .option("--apply", "write generated test file")
   .option("-f, --force", "overwrite existing generated test file")
   .option("--run-jest", "run scoped jest for generated file")

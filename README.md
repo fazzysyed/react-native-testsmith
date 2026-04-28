@@ -47,6 +47,7 @@ react-native-testsmith scan
 react-native-testsmith generate
 react-native-testsmith ai-setup
 react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx
+react-native-testsmith ai-enhance --runtime api --target src/screens/LoginScreen.tsx
 react-native-testsmith doctor
 react-native-testsmith doctor --json
 ```
@@ -159,6 +160,7 @@ Notes:
 - First-time model download may take several minutes. This is one-time per model.
 - Without `--apply`, the command runs in preview mode and prints output.
 - If `--run-jest` is set and Jest fails, AI auto-fix retries run (based on `ai.maxRetries`).
+- API runtime is scaffolded: set `RN_TESTSMITH_API_URL` (required) and `RN_TESTSMITH_API_KEY` (optional).
 
 ## CI
 
