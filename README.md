@@ -3,14 +3,22 @@
 [![npm version](https://img.shields.io/npm/v/react-native-testsmith.svg)](https://www.npmjs.com/package/react-native-testsmith)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Production-ready, local-first CLI for React Native unit testing with Jest and React Native Testing Library.
+Production-ready CLI for React Native unit testing with Jest and React Native Testing Library.
+
+## 1.0.1 Update
+
+- Switched to API-first AI generation (Ollama removed on this branch)
+- `init` now runs Jest setup automatically
+- `generate` now runs full pipeline: scan + API check + per-file AI generation
+- Long files are chunked automatically for free-tier model limits
+- Added per-file progress logs and final generation summary counts
 
 ## Why this exists
 
 - Automates painful Jest + RN config
 - Scans your components/screens and builds metadata
 - Generates stable test templates quickly
-- Keeps everything local (no external API needed)
+- Supports API-driven AI test generation with chunking for large files
 
 ## Install
 
@@ -39,14 +47,7 @@ If you see `command not found`, install globally (`npm i -g .`) or run with `npx
 
 ```bash
 react-native-testsmith init
-react-native-testsmith setup
-react-native-testsmith setup --dry-run
-react-native-testsmith setup --with-native-mocks
-react-native-testsmith setup --skip-install
-react-native-testsmith scan
 react-native-testsmith generate
-react-native-testsmith ai-setup
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx
 react-native-testsmith doctor
 react-native-testsmith doctor --json
 ```
@@ -55,11 +56,7 @@ react-native-testsmith doctor --json
 
 ```bash
 react-native-testsmith init
-react-native-testsmith setup
-react-native-testsmith scan
 react-native-testsmith generate
-react-native-testsmith ai-setup
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply --run-jest
 ```
 
 ## Full setup steps (end-to-end)
@@ -85,34 +82,18 @@ react-native-testsmith init
 4. Configure Jest and required mocks
 
 ```bash
+# already done by init
+# optional manual run:
 react-native-testsmith setup
 ```
 
-5. Scan project components/screens
-
-```bash
-react-native-testsmith scan
-```
-
-6. Generate baseline test templates
+5. Run complete generation pipeline (scan + API check + per-file AI generation)
 
 ```bash
 react-native-testsmith generate
 ```
 
-7. Bootstrap local AI runtime (Ollama + model)
-
-```bash
-react-native-testsmith ai-setup
-```
-
-8. Generate/improve tests with AI for a specific file
-
-```bash
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply --run-jest
-```
-
-9. Validate setup health
+6. Verify setup health
 
 ```bash
 react-native-testsmith doctor
@@ -136,6 +117,8 @@ When you pass `--with-native-mocks`, setup also creates:
 
 Use `--dry-run` to preview all setup changes safely before writing files.
 
+`init` runs setup automatically. You can still run `setup` directly when needed.
+
 ## Test output structure
 
 `generate` mirrors your source structure in `__tests__` when `testFileStyle` is `tests-dir`.
@@ -144,22 +127,13 @@ Example:
 - `src/components/Button.tsx` -> `__tests__/components/Button.test.tsx`
 - `src/screens/auth/Login.js` -> `__tests__/screens/auth/Login.test.js`
 
-## Local AI enhancement
+## API notes
 
-`ai-enhance` uses a local Ollama model (no external API):
-
-```bash
-react-native-testsmith ai-setup
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --model qwen2.5-coder:7b --apply --run-jest
-```
-
-Notes:
-- `ai-setup` checks Ollama, starts service if needed, and downloads model automatically.
-- First-time model download may take several minutes. This is one-time per model.
-- Without `--apply`, the command runs in preview mode and prints output.
-- If `--run-jest` is set and Jest fails, AI auto-fix retries run (based on `ai.maxRetries`).
-- We are actively working on a cloud API mode for complete automatic testing across whole projects.
+- `generate` is the primary AI command now (project-wide).
+- `RN_TESTSMITH_API_URL` overrides endpoint and `RN_TESTSMITH_API_KEY` is optional.
+- Long files are chunked automatically and then synthesized.
+- `scan` includes `App.ts`, `App.js`, `App.tsx`, and `App.jsx` at project root.
+- Terminal output includes per-file progress and final AI response/generated counts.
 
 ## CI
 
@@ -175,7 +149,7 @@ GitHub Actions CI is included at `.github/workflows/ci.yml`:
 
 ## Sponsor request
 
-`react-native-testsmith` is currently local-first and free to use.
+`react-native-testsmith` is currently free to use.
 
 If this project saves your team time, please sponsor development so we can:
 - maintain and improve templates faster

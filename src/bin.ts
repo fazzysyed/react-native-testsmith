@@ -25,7 +25,7 @@ program
 
 program
   .command("setup")
-  .description("Create Jest + React Native setup files")
+  .description("Create Jest + React Native setup files (optional; init runs this automatically)")
   .option("-f, --force", "overwrite existing setup files")
   .option("--dry-run", "preview file changes without writing")
   .option("--with-native-mocks", "also add common native module mocks")
@@ -39,22 +39,21 @@ program
 
 program
   .command("generate")
-  .description("Generate test templates from scan report")
+  .description("Run full AI generation pipeline for all scanned files")
   .option("-f, --force", "overwrite existing test files")
-  .action((options) => runGenerate(projectRoot, options));
+  .action(async (options) => runGenerate(projectRoot, options));
 
 program
   .command("ai-setup")
-  .description("Install/check local AI runtime requirements (Ollama + model)")
-  .option("-m, --model <name>", "Ollama model name override")
-  .option("--skip-pull", "skip model download and only run checks")
+  .description("Check API runtime requirements")
+  .option("-e, --endpoint <url>", "API endpoint override for setup check")
   .action(async (options) => runAiSetup(projectRoot, options));
 
 program
   .command("ai-enhance")
-  .description("Generate or improve tests with local Ollama model")
+  .description("Generate or improve tests with API runtime")
   .requiredOption("-t, --target <path>", "target component path")
-  .option("-m, --model <name>", "Ollama model name override")
+  .option("-m, --model <name>", "model name forwarded to API")
   .option("--apply", "write generated test file")
   .option("-f, --force", "overwrite existing generated test file")
   .option("--run-jest", "run scoped jest for generated file")

@@ -119,6 +119,16 @@ function mergeObjectField(content: string, fieldName: string, entries: Array<{ k
   return content.replace(fieldRegex, `${match[1]}${nextBody}${match[3]}`);
 }
 
+function insertTopLevelField(content: string, fieldBlock: string): string {
+  const exportRegex = /module\.exports\s*=\s*\{([\s\S]*?)\}\s*;?/m;
+  const match = content.match(exportRegex);
+  if (!match) return content;
+  const existingBody = match[1].trimEnd();
+  const separator = existingBody.length > 0 && !existingBody.trim().endsWith(",") ? "," : "";
+  const nextBody = `${existingBody}${separator}\n  ${fieldBlock}\n`;
+  return content.replace(exportRegex, `module.exports = {${nextBody}};`);
+}
+
 function mergeJestConfig(existing: string): string {
   let merged = existing;
 
@@ -130,9 +140,24 @@ function mergeJestConfig(existing: string): string {
   }
 
   merged = mergeArrayField(merged, "setupFilesAfterEnv", ["'<rootDir>/jest.setup.ts'"]);
+  if (!/setupFilesAfterEnv\s*:\s*\[/m.test(merged)) {
+    merged = insertTopLevelField(merged, "setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],");
+  }
+
+  if (!/transform\s*:\s*\{/m.test(merged)) {
+    merged = insertTopLevelField(merged, "transform: { '^.+\\\\.[jt]sx?$': 'babel-jest' },");
+  }
+
   merged = mergeArrayField(merged, "transformIgnorePatterns", [
     "'node_modules/(?!(react-native|@react-native|@react-navigation|@react-native-community|@testing-library/react-native|react-native-linear-gradient)/)'"
   ]);
+  if (!/transformIgnorePatterns\s*:\s*\[/m.test(merged)) {
+    merged = insertTopLevelField(
+      merged,
+      "transformIgnorePatterns: ['node_modules/(?!(react-native|@react-native|@react-navigation|@react-native-community|@testing-library/react-native|react-native-linear-gradient)/)'],"
+    );
+  }
+
   merged = mergeObjectField(merged, "moduleNameMapper", [
     { key: "'^@/(.*)$'", value: "'<rootDir>/src/$1'" },
     {
@@ -143,6 +168,12 @@ function mergeJestConfig(existing: string): string {
     { key: "'react-native-responsive-fontsize'", value: "'<rootDir>/__mocks__/react-native-responsive-fontsize.tsx'" },
     { key: "'react-native-size-matters'", value: "'<rootDir>/__mocks__/react-native-size-matters.tsx'" }
   ]);
+  if (!/moduleNameMapper\s*:\s*\{/m.test(merged)) {
+    merged = insertTopLevelField(
+      merged,
+      "moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1', '\\\\.(png|jpg|jpeg|gif|webp|svg|mp4|mp3|ttf|woff|woff2)$': '<rootDir>/__mocks__/fileMock.tsx', '\\\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.ts', 'react-native-responsive-fontsize': '<rootDir>/__mocks__/react-native-responsive-fontsize.tsx', 'react-native-size-matters': '<rootDir>/__mocks__/react-native-size-matters.tsx' },"
+    );
+  }
 
   return merged;
 }

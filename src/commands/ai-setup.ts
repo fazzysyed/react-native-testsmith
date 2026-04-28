@@ -1,63 +1,42 @@
 import { loadConfig } from "../config.js";
 import { logInfo, logSuccess, logWarn } from "../utils.js";
-import {
-  hasOllamaModel,
-  isOllamaInstalled,
-  isOllamaReachable,
-  listOllamaModels,
-  pullOllamaModel,
-  tryStartOllamaServer,
-  waitForOllamaServer
-} from "../ai/ollama.js";
 
 type AiSetupOptions = {
-  model?: string;
-  skipPull?: boolean;
+  endpoint?: string;
 };
 
 export async function runAiSetup(projectRoot: string, options: AiSetupOptions): Promise<void> {
   const config = loadConfig(projectRoot);
-  const model = options.model ?? config.ai.model;
-
-  if (!isOllamaInstalled()) {
-    logWarn("Ollama is not installed.");
-    logInfo("Install Ollama first: https://ollama.com/download");
+  const endpoint = options.endpoint ?? process.env.RN_TESTSMITH_API_URL ?? "https://c087-182-180-87-19.ngrok-free.app/generate-tests";
+  const apiKey = process.env.RN_TESTSMITH_API_KEY;
+  if (!endpoint) {
+    logWarn("API endpoint is not configured.");
+    logInfo("Set RN_TESTSMITH_API_URL and re-run `react-native-testsmith ai-setup`.");
     return;
   }
 
-  let reachable = await isOllamaReachable();
-  if (!reachable) {
-    logInfo("Ollama service is not running. Starting it now...");
-    tryStartOllamaServer();
-    reachable = await waitForOllamaServer();
-  }
+  logInfo(`Checking API endpoint: ${endpoint}`);
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+    },
+    body: "healthcheck"
+  }).catch(() => null);
 
-  if (!reachable) {
-    logWarn("Could not connect to Ollama at http://127.0.0.1:11434.");
-    logInfo("Please run `ollama serve` and re-run `react-native-testsmith ai-setup`.");
+  if (!res) {
+    logWarn("API endpoint is unreachable.");
+    logInfo("Check URL/network and try again.");
     return;
   }
 
-  logSuccess("Ollama service is ready.");
-
-  if (options.skipPull) {
-    const models = await listOllamaModels();
-    logInfo(`Installed models: ${models.length ? models.join(", ") : "none"}`);
+  if (!res.ok) {
+    logWarn(`API endpoint responded with ${res.status}.`);
+    logInfo("Endpoint is reachable, but request contract may differ. This can still be okay for real prompts.");
     return;
   }
 
-  const modelExists = await hasOllamaModel(model);
-  if (modelExists) {
-    logSuccess(`Model already installed: ${model}`);
-    return;
-  }
-
-  logInfo(`Model not found: ${model}`);
-  logInfo("First-time model download can take several minutes. Please wait...");
-  const pulled = pullOllamaModel(model);
-  if (!pulled) {
-    logWarn(`Failed to pull model: ${model}`);
-    return;
-  }
-  logSuccess(`Model downloaded successfully: ${model}`);
+  logSuccess("API setup looks good.");
+  logInfo(`Model configured in project config: ${config.ai.model}`);
 }

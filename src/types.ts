@@ -4,7 +4,7 @@ export type RuntimeConfig = {
   testFileStyle: "co-located" | "tests-dir";
   ai: {
     enabled: boolean;
-    runtime: "ollama";
+    runtime: "api";
     model: string;
     maxRetries: number;
   };
