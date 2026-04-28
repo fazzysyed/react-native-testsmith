@@ -3,22 +3,40 @@
 [![npm version](https://img.shields.io/npm/v/react-native-testsmith.svg)](https://www.npmjs.com/package/react-native-testsmith)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Production-ready CLI for React Native unit testing with Jest and React Native Testing Library.
+Production-grade React Native testing CLI for Jest + React Native Testing Library, now with API-first AI generation.
 
-## 1.0.1 Update
+## v0.1.2 Announcement
 
-- Switched to API-first AI generation (Ollama removed on this branch)
-- `init` now runs Jest setup automatically
-- `generate` now runs full pipeline: scan + API check + per-file AI generation
-- Long files are chunked automatically for free-tier model limits
-- Added per-file progress logs and final generation summary counts
+- API-first workflow is now the default.
+- `init` runs setup automatically.
+- `generate` runs full pipeline: scan + API check + per-file AI test generation.
+- Large files are chunked automatically for free-tier model limits.
+- Terminal progress is shown per file with final response/generated counters.
+- Reliability improvements include timeout, retries, and failed-file rerun mode.
 
-## Why this exists
+## Cloud API stack (current)
 
-- Automates painful Jest + RN config
-- Scans your components/screens and builds metadata
-- Generates stable test templates quickly
-- Supports API-driven AI test generation with chunking for large files
+Built with FastAPI, hosted on Hugging Face Spaces.  
+Uses LLaMA 3.3 70B via Groq for fast inference.
+
+Send any React Native component as plain text to `/generate-tests` and get:
+- component summary
+- key test scenarios
+- full Jest + React Native Testing Library test file
+
+System prompt is engineered to cover:
+- rendering
+- interactions
+- state changes
+- async behavior
+- edge cases
+- accessibility
+
+## Why this CLI exists
+
+- remove repetitive RN Jest setup pain
+- standardize test scaffolding across projects
+- speed up test writing without blocking manual refinement
 
 ## Install
 
@@ -32,18 +50,7 @@ Or inside a project:
 npm i -D react-native-testsmith
 ```
 
-For local development from this repo:
-
-```bash
-npm i
-npm run build
-npm i -g .
-react-native-testsmith --help
-```
-
-If you see `command not found`, install globally (`npm i -g .`) or run with `npx`.
-
-## Commands
+## Main commands
 
 ```bash
 react-native-testsmith init
@@ -53,111 +60,71 @@ react-native-testsmith doctor
 react-native-testsmith doctor --json
 ```
 
-## Typical workflow
+## Quickstart (recommended)
 
-```bash
-react-native-testsmith init
-react-native-testsmith generate
-```
-
-## Full setup steps (end-to-end)
-
-1. Install CLI
-
-```bash
-npm i -g react-native-testsmith
-```
-
-2. Move to your React Native app
+1. Go to your React Native app
 
 ```bash
 cd mobileApp
 ```
 
-3. Create config
+2. Initialize config + Jest setup
 
 ```bash
 react-native-testsmith init
 ```
 
-4. Configure Jest and required mocks
-
-```bash
-# already done by init
-# optional manual run:
-react-native-testsmith setup
-```
-
-5. Run complete generation pipeline (scan + API check + per-file AI generation)
+3. Run full AI generation pipeline
 
 ```bash
 react-native-testsmith generate
 ```
 
-6. Verify setup health
+4. Retry only failed files if needed
 
 ```bash
-react-native-testsmith doctor
-react-native-testsmith doctor --json
+react-native-testsmith generate --failed-only
 ```
 
-## Setup output
+## Environment variables
 
-`setup` creates:
-- `jest.config.js`
-- `jest.setup.ts`
-- `__mocks__/fileMock.tsx`
-- `__mocks__/styleMock.ts`
-- RN mock shims for common libraries
-- installs `@testing-library/react-native` if missing
+- `RN_TESTSMITH_API_URL` (optional override for default API endpoint)
+- `RN_TESTSMITH_API_KEY` (optional auth token)
+- `RN_TESTSMITH_API_CHUNK_SIZE` (default: `12000`)
+- `RN_TESTSMITH_API_TIMEOUT_MS` (default: `120000`)
+- `RN_TESTSMITH_API_RETRIES` (default: `2`)
+- `RN_TESTSMITH_API_BACKOFF_MS` (default: `2000`)
 
-When you pass `--with-native-mocks`, setup also creates:
-- `__mocks__/react-native-config.ts`
-- `__mocks__/react-native-device-info.ts`
-- `__mocks__/react-native-vector-icons-MaterialIcons.ts`
+## Output behavior
 
-Use `--dry-run` to preview all setup changes safely before writing files.
+- `generate` scans `.tsx/.jsx/.ts/.js` including root `App.ts/js/tsx/jsx`
+- test files mirror source structure under `__tests__`
+- failed API files are saved to `.react-native-testsmith/failed-files.json`
 
-`init` runs setup automatically. You can still run `setup` directly when needed.
+## Important note from maintainer
 
-## Test output structure
+I built this CLI solo.  
+I have tried to make it production-level ready, but there may still be issues.
 
-`generate` mirrors your source structure in `__tests__` when `testFileStyle` is `tests-dir`.
+I am very open to:
+- bug reports
+- feature discussions
+- architecture suggestions
 
-Example:
-- `src/components/Button.tsx` -> `__tests__/components/Button.test.tsx`
-- `src/screens/auth/Login.js` -> `__tests__/screens/auth/Login.test.js`
+## Looking for collaborators and sponsors
 
-## API notes
+I want to turn this into a broader testing ecosystem, not just a CLI.
 
-- `generate` is the primary AI command now (project-wide).
-- `RN_TESTSMITH_API_URL` overrides endpoint and `RN_TESTSMITH_API_KEY` is optional.
-- Long files are chunked automatically and then synthesized.
-- `scan` includes `App.ts`, `App.js`, `App.tsx`, and `App.jsx` at project root.
-- Terminal output includes per-file progress and final AI response/generated counts.
-- 5xx API errors/timeouts are retried automatically (configurable via env vars).
-- Failed files are stored in `.react-native-testsmith/failed-files.json` and can be retried with `generate --failed-only`.
+Why sponsorship matters:
+- host models on our own infrastructure
+- use more efficient and stronger models
+- improve reliability and throughput
+- add richer workflows beyond test scaffolding
 
-## CI
+If you are interested in collaborating or sponsoring, please open an issue titled:
+- `Collaboration`
+- `Sponsorship`
 
-GitHub Actions CI is included at `.github/workflows/ci.yml`:
-- typecheck
-- build
-- test
+## Hashtags
 
-## Notes
-
-- Generated tests are templates and should be refined by developers.
-- Use `--force` if you want to overwrite existing generated files.
-
-## Sponsor request
-
-`react-native-testsmith` is currently free to use.
-
-If this project saves your team time, please sponsor development so we can:
-- maintain and improve templates faster
-- add broader framework support
-- provide optional hosted model inference in the future
-- keep docs, CI, and releases production-grade
-
-Interested in sponsoring? Open an issue with title `Sponsorship` and we will coordinate.
+#ReactNative #Jest #Testing #ReactNativeTestingLibrary #FastAPI #HuggingFace #Groq #OpenSource #DevTools #TypeScript
