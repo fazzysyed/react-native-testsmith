@@ -5,6 +5,14 @@
 
 Production-ready CLI for React Native unit testing with Jest and React Native Testing Library.
 
+## 1.0.1 Update
+
+- Switched to API-first AI generation (Ollama removed on this branch)
+- `init` now runs Jest setup automatically
+- `generate` now runs full pipeline: scan + API check + per-file AI generation
+- Long files are chunked automatically for free-tier model limits
+- Added per-file progress logs and final generation summary counts
+
 ## Why this exists
 
 - Automates painful Jest + RN config
@@ -40,8 +48,6 @@ If you see `command not found`, install globally (`npm i -g .`) or run with `npx
 ```bash
 react-native-testsmith init
 react-native-testsmith generate
-react-native-testsmith ai-setup
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx
 react-native-testsmith doctor
 react-native-testsmith doctor --json
 ```
@@ -51,7 +57,6 @@ react-native-testsmith doctor --json
 ```bash
 react-native-testsmith init
 react-native-testsmith generate
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply
 ```
 
 ## Full setup steps (end-to-end)
@@ -88,19 +93,7 @@ react-native-testsmith setup
 react-native-testsmith generate
 ```
 
-6. Verify API runtime setup (optional standalone check)
-
-```bash
-react-native-testsmith ai-setup
-```
-
-7. Generate/improve tests with AI for a specific file
-
-```bash
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply --run-jest
-```
-
-8. Validate setup health
+6. Verify setup health
 
 ```bash
 react-native-testsmith doctor
@@ -134,24 +127,13 @@ Example:
 - `src/components/Button.tsx` -> `__tests__/components/Button.test.tsx`
 - `src/screens/auth/Login.js` -> `__tests__/screens/auth/Login.test.js`
 
-## AI enhancement (API)
+## API notes
 
-`ai-enhance` uses an API backend:
-
-```bash
-react-native-testsmith ai-setup
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --apply
-react-native-testsmith ai-enhance --target src/screens/LoginScreen.tsx --model default --apply --run-jest
-```
-
-Notes:
-- `ai-setup` checks API endpoint connectivity.
-- Without `--apply`, the command runs in preview mode and prints output.
-- If `--run-jest` is set and Jest fails, AI auto-fix retries run (based on `ai.maxRetries`).
+- `generate` is the primary AI command now (project-wide).
 - `RN_TESTSMITH_API_URL` overrides endpoint and `RN_TESTSMITH_API_KEY` is optional.
-- For long files, API runtime automatically chunks input and synthesizes a final test response.
+- Long files are chunked automatically and then synthesized.
 - `scan` includes `App.ts`, `App.js`, `App.tsx`, and `App.jsx` at project root.
-- `generate` shows per-file progress and final counts for AI responses and generated files.
+- Terminal output includes per-file progress and final AI response/generated counts.
 
 ## CI
 
