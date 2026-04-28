@@ -113,9 +113,6 @@ test("generate creates test template with smart hints", () => {
   const generated = fs.readFileSync(outputPath, "utf8");
 
   assert.match(generated, /describe\('LoginScreen'/);
-  assert.match(generated, /getByText\("Login"\)/);
-  assert.match(generated, /getByText\("Submit"\)/);
-  assert.match(generated, /@react-navigation\/native/);
-  assert.match(generated, /TODO: wrap with Redux provider/);
-  assert.match(generated, /TODO: add fetch\/axios mock/);
+  assert.match(generated, /import LoginScreen/);
+  assert.match(generated, /it\('/);
 });

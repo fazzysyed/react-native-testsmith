@@ -3,7 +3,10 @@ import path from "node:path";
 import { SCAN_REPORT_FILE } from "../constants.js";
 import { loadConfig } from "../config.js";
 import type { ComponentMeta, ScanReport } from "../types.js";
-import { ensureDir, logSuccess, logWarn, resolveFromRoot, writeFileSafe } from "../utils.js";
+import { ensureDir, logInfo, logSuccess, logWarn, resolveFromRoot, writeFileSafe } from "../utils.js";
+import { runScan } from "./scan.js";
+import { runAiSetup } from "./ai-setup.js";
+import { createApiProvider } from "../ai/api.js";
 
 function canonicalPath(inputPath: string): string {
   try {
@@ -49,34 +52,32 @@ function toMirroredTestsPath(projectRoot: string, sourcePath: string, scanDirs: 
   return relDir === "." ? path.join(rootCanonical, outputDir, fileName) : path.join(rootCanonical, outputDir, relDir, fileName);
 }
 
-function testTemplate(meta: ComponentMeta, importPath: string): string {
-  const textChecks = [...meta.textLiterals, ...meta.buttonTitles].slice(0, 4);
-  const assertions = textChecks.length
-    ? textChecks.map((text) => `  expect(getByText(${JSON.stringify(text)})).toBeTruthy();`).join("\n")
-    : "  expect(toJSON()).toBeTruthy();";
-
-  const navMock = meta.hasNavigation
-    ? "jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: jest.fn() }) }));\n\n"
-    : "";
-
-  const apiMock = meta.hasApiCalls ? "  // TODO: add fetch/axios mock for API-dependent behavior.\n" : "";
-  const reduxNote = meta.hasRedux ? "  // TODO: wrap with Redux provider when asserting state-driven UI.\n" : "";
-
-  return `import React from 'react';
-import { render } from '@testing-library/react-native';
-import ${meta.componentName} from '${importPath}';
-
-${navMock}describe('${meta.componentName}', () => {
-  it('renders expected UI', () => {
-${reduxNote}${apiMock}    const { getByText, toJSON } = render(<${meta.componentName} />);
-${assertions}
-  });
-});
-`;
+function extractCodeFromApiResponse(raw: string): string {
+  const fenced = raw.match(/```(?:tsx|ts|jsx|js)?\n([\s\S]*?)```/i);
+  return (fenced?.[1] ?? raw).trim();
 }
 
-export function runGenerate(projectRoot: string, options: { force?: boolean }): void {
+function buildPrompt(meta: ComponentMeta, sourceCode: string, importPath: string): string {
+  return `You are generating Jest + React Native Testing Library test code for a single file.
+Return ONLY test code. No explanation.
+
+Target component/file name: ${meta.componentName}
+Import path to use in test: ${importPath}
+Detected hints:
+- hasNavigation: ${meta.hasNavigation}
+- hasRedux: ${meta.hasRedux}
+- hasApiCalls: ${meta.hasApiCalls}
+- textLiterals: ${meta.textLiterals.join(", ") || "none"}
+- buttonTitles: ${meta.buttonTitles.join(", ") || "none"}
+
+Source:
+${sourceCode}`;
+}
+
+export async function runGenerate(projectRoot: string, options: { force?: boolean }): Promise<void> {
   const config = loadConfig(projectRoot);
+  runScan(projectRoot);
+  await runAiSetup(projectRoot, {});
   const reportPath = resolveFromRoot(projectRoot, SCAN_REPORT_FILE);
   if (!fs.existsSync(reportPath)) {
     logWarn("No scan report found. Run `react-native-testsmith scan` first.");
@@ -86,8 +87,13 @@ export function runGenerate(projectRoot: string, options: { force?: boolean }): 
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8")) as ScanReport;
   const overwrite = Boolean(options.force);
   let written = 0;
+  let responded = 0;
+  const provider = createApiProvider();
 
-  for (const component of report.components) {
+  for (let idx = 0; idx < report.components.length; idx += 1) {
+    const component = report.components[idx];
+    const relSource = path.relative(projectRoot, component.filePath);
+    logInfo(`[${idx + 1}/${report.components.length}] Processing ${relSource}`);
     const outPath =
       config.testFileStyle === "co-located"
         ? path.join(path.dirname(component.filePath), `${component.componentName}${toTestExtension(component.filePath)}`)
@@ -95,10 +101,21 @@ export function runGenerate(projectRoot: string, options: { force?: boolean }): 
 
     ensureDir(outPath);
     const importPath = toImportPath(outPath, component.filePath);
-    const content = testTemplate(component, importPath);
+    const sourceCode = fs.readFileSync(component.filePath, "utf8");
+    const prompt = buildPrompt(component, sourceCode, importPath);
+    let content = "";
+    try {
+      const apiRaw = await provider.generateText({ prompt, model: config.ai.model });
+      responded += 1;
+      content = `${extractCodeFromApiResponse(apiRaw)}\n`;
+    } catch (error) {
+      logWarn(`API failed for ${relSource}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
     const res = writeFileSafe(outPath, content, overwrite);
     if (res.written) written += 1;
   }
 
+  logSuccess(`AI responded for ${responded}/${report.components.length} file(s).`);
   logSuccess(`Generated ${written} test file(s).`);
 }

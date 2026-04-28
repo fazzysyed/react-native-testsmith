@@ -10,8 +10,8 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
   testFileStyle: "tests-dir",
   ai: {
     enabled: true,
-    runtime: "ollama",
-    model: "qwen2.5-coder:7b",
+    runtime: "api",
+    model: "default",
     maxRetries: 1
   }
 };

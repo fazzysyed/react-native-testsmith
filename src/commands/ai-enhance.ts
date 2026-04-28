@@ -5,10 +5,7 @@ import { loadConfig } from "../config.js";
 import { SCAN_REPORT_FILE } from "../constants.js";
 import type { ComponentMeta, ScanReport } from "../types.js";
 import { ensureDir, logInfo, logSuccess, logWarn, resolveFromRoot, writeFileSafe } from "../utils.js";
-import { hasOllamaModel, isOllamaInstalled, isOllamaReachable, pullOllamaModel, tryStartOllamaServer, waitForOllamaServer } from "../ai/ollama.js";
-import { createOllamaProvider } from "../ai/ollama-provider.js";
 import { createApiProvider } from "../ai/api.js";
-import type { AiProviderRuntime } from "../ai/provider.js";
 
 type AiEnhanceOptions = {
   target?: string;
@@ -16,7 +13,6 @@ type AiEnhanceOptions = {
   apply?: boolean;
   force?: boolean;
   runJest?: boolean;
-  runtime?: AiProviderRuntime;
 };
 
 function cleanModelOutput(raw: string): string {
@@ -85,12 +81,8 @@ function loadMetadataForTarget(projectRoot: string, absTarget: string): Componen
   }
 }
 
-async function generateWithProvider(
-  runtime: AiProviderRuntime,
-  prompt: string,
-  model: string
-): Promise<string> {
-  const provider = runtime === "api" ? createApiProvider() : createOllamaProvider();
+async function generateWithProvider(prompt: string, model: string): Promise<string> {
+  const provider = createApiProvider();
   const raw = await provider.generateText({ prompt, model });
   return cleanModelOutput(raw);
 }
@@ -163,7 +155,6 @@ function runScopedJest(projectRoot: string, testPath: string): { ok: boolean; ou
 
 export async function runAiEnhance(projectRoot: string, options: AiEnhanceOptions): Promise<void> {
   const config = loadConfig(projectRoot);
-  const runtime = options.runtime ?? config.ai.runtime;
   const model = options.model ?? config.ai.model;
   const apply = Boolean(options.apply);
   const runJest = Boolean(options.runJest);
@@ -175,41 +166,8 @@ export async function runAiEnhance(projectRoot: string, options: AiEnhanceOption
     return;
   }
 
-  if (runtime === "ollama") {
-    if (!isOllamaInstalled()) {
-      logWarn("Ollama is not installed.");
-      logInfo("Install Ollama from https://ollama.com/download and run `react-native-testsmith ai-setup`.");
-      return;
-    }
-
-    let reachable = await isOllamaReachable();
-    if (!reachable) {
-      logInfo("Ollama is not running. Attempting to start it...");
-      tryStartOllamaServer();
-      reachable = await waitForOllamaServer();
-    }
-    if (!reachable) {
-      logWarn("Could not connect to Ollama at http://127.0.0.1:11434.");
-      logInfo("Run `react-native-testsmith ai-setup` to bootstrap Ollama and model.");
-      return;
-    }
-
-    const modelExists = await hasOllamaModel(model);
-    if (!modelExists) {
-      logInfo(`Model ${model} is not installed locally.`);
-      logInfo("First-time model download can take several minutes. Please wait...");
-      const pulled = pullOllamaModel(model);
-      if (!pulled) {
-        logWarn(`Failed to download model: ${model}`);
-        return;
-      }
-    }
-  } else {
-    if (!process.env.RN_TESTSMITH_API_URL) {
-      logWarn("API runtime selected but RN_TESTSMITH_API_URL is not configured.");
-      logInfo("Set RN_TESTSMITH_API_URL and optionally RN_TESTSMITH_API_KEY, then retry.");
-      return;
-    }
+  if (!process.env.RN_TESTSMITH_API_URL) {
+    logInfo("Using default API endpoint. Set RN_TESTSMITH_API_URL to override.");
   }
 
   const absTarget = resolveFromRoot(projectRoot, options.target);
@@ -225,8 +183,8 @@ export async function runAiEnhance(projectRoot: string, options: AiEnhanceOption
   const meta = loadMetadataForTarget(projectRoot, absTarget);
   const prompt = buildPrompt(componentName, componentCode, existingTest, meta);
 
-  logInfo(`Generating AI-enhanced tests using ${runtime} runtime with model: ${model}`);
-  let generated = await generateWithProvider(runtime, prompt, model);
+  logInfo(`Generating AI-enhanced tests using API runtime with model: ${model}`);
+  let generated = await generateWithProvider(prompt, model);
 
   if (!generated.includes("describe(") || !generated.includes("it(")) {
     logWarn("Model output does not look like a Jest test file. Aborting write.");
@@ -263,7 +221,7 @@ export async function runAiEnhance(projectRoot: string, options: AiEnhanceOption
       logInfo(`Attempting AI auto-fix (${attempt}/${maxRetries})...`);
       const failingTest = fs.readFileSync(testPath, "utf8");
       const repairPrompt = buildRepairPrompt(componentName, componentCode, failingTest, jestResult.output);
-      generated = await generateWithProvider(runtime, repairPrompt, model);
+      generated = await generateWithProvider(repairPrompt, model);
       if (!generated.includes("describe(") || !generated.includes("it(")) {
         logWarn("Auto-fix output was invalid test content. Stopping retries.");
         break;

@@ -1,4 +1,4 @@
-export type AiProviderRuntime = "ollama" | "api";
+export type AiProviderRuntime = "api";
 
 export type GenerateTextInput = {
   prompt: string;

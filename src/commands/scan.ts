@@ -55,7 +55,10 @@ function parseComponent(filePath: string): ComponentMeta | null {
     }
   });
 
-  if (!componentName) return null;
+  if (!componentName) {
+    const baseName = path.basename(filePath, path.extname(filePath));
+    componentName = baseName.replace(/[^a-zA-Z0-9_$]/g, "_");
+  }
 
   return {
     filePath,
@@ -70,7 +73,8 @@ function parseComponent(filePath: string): ComponentMeta | null {
 
 export function runScan(projectRoot: string): void {
   const config = loadConfig(projectRoot);
-  const patterns = config.scanDirs.map((d) => `${d.replace(/\/+$/, "")}/**/*.{tsx,jsx}`);
+  const patterns = config.scanDirs.map((d) => `${d.replace(/\/+$/, "")}/**/*.{tsx,jsx,ts,js}`);
+  patterns.push("App.{tsx,jsx,ts,js}");
   const files = fg.sync(patterns, { cwd: projectRoot, absolute: true, onlyFiles: true });
   const components: ComponentMeta[] = [];
 
