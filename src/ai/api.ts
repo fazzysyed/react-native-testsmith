@@ -19,28 +19,57 @@ function extractApiText(payload: unknown): string {
 }
 
 async function callApi(endpoint: string, bodyText: string, apiKey?: string): Promise<string> {
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
-    },
-    body: bodyText
-  });
+  const timeoutMs = Number(process.env.RN_TESTSMITH_API_TIMEOUT_MS ?? "120000");
+  const maxRetries = Number(process.env.RN_TESTSMITH_API_RETRIES ?? "2");
+  const baseBackoffMs = Number(process.env.RN_TESTSMITH_API_BACKOFF_MS ?? "2000");
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+        },
+        body: bodyText,
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        if (res.status >= 500 && res.status <= 599 && attempt < maxRetries) {
+          const backoff = baseBackoffMs * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          continue;
+        }
+        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+      }
+
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const json = await res.json();
+        const text = extractApiText(json);
+        if (!text) throw new Error("API response did not include a text payload.");
+        return text;
+      }
+
+      return res.text();
+    } catch (error) {
+      clearTimeout(timer);
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      lastError = new Error(isAbort ? `API request timed out after ${timeoutMs}ms` : (error instanceof Error ? error.message : String(error)));
+      if (attempt < maxRetries) {
+        const backoff = baseBackoffMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, backoff));
+        continue;
+      }
+    }
   }
 
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    const json = await res.json();
-    const text = extractApiText(json);
-    if (!text) throw new Error("API response did not include a text payload.");
-    return text;
-  }
-
-  return res.text();
+  throw lastError ?? new Error("API request failed");
 }
 
 function chunkText(input: string, chunkSize: number): string[] {

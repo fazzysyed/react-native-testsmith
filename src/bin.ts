@@ -41,6 +41,7 @@ program
   .command("generate")
   .description("Run full AI generation pipeline for all scanned files")
   .option("-f, --force", "overwrite existing test files")
+  .option("--failed-only", "process only files that failed in previous run")
   .action(async (options) => runGenerate(projectRoot, options));
 
 program
