@@ -48,6 +48,7 @@ If you see `command not found`, install globally (`npm i -g .`) or run with `npx
 ```bash
 react-native-testsmith init
 react-native-testsmith generate
+react-native-testsmith generate --failed-only
 react-native-testsmith doctor
 react-native-testsmith doctor --json
 ```
@@ -134,6 +135,8 @@ Example:
 - Long files are chunked automatically and then synthesized.
 - `scan` includes `App.ts`, `App.js`, `App.tsx`, and `App.jsx` at project root.
 - Terminal output includes per-file progress and final AI response/generated counts.
+- 5xx API errors/timeouts are retried automatically (configurable via env vars).
+- Failed files are stored in `.react-native-testsmith/failed-files.json` and can be retried with `generate --failed-only`.
 
 ## CI
 

@@ -3,6 +3,7 @@ import type { RuntimeConfig } from "./types.js";
 export const CONFIG_FILE = ".react-native-testsmith.json";
 export const SCAN_CACHE_DIR = ".react-native-testsmith";
 export const SCAN_REPORT_FILE = ".react-native-testsmith/scan-report.json";
+export const FAILED_FILES_REPORT = ".react-native-testsmith/failed-files.json";
 
 export const DEFAULT_CONFIG: RuntimeConfig = {
   scanDirs: ["src/components", "src/screens"],
