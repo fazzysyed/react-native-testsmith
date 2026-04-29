@@ -125,6 +125,8 @@ If you are interested in collaborating or sponsoring, please open an issue title
 - `Collaboration`
 - `Sponsorship`
 
+For shared commits, use a `Co-authored-by: Name <email>` trailer in the message body so GitHub attributes work to every author.
+
 ## Hashtags
 
 #ReactNative #Jest #Testing #ReactNativeTestingLibrary #FastAPI #HuggingFace #Groq #OpenSource #DevTools #TypeScript
